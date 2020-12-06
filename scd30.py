@@ -2,8 +2,8 @@ from machine import I2C
 import utime
 import struct
 
-class SCD30:
 
+class SCD30:
     class NotFoundException(Exception):
         pass
 
@@ -19,8 +19,8 @@ class SCD30:
     SET_FRC = 0x5204
     SET_TEMP_OFFSET = 0x5403
     SET_ALT_COMP = 0x5102
-    GET_FIRMWARE_VER = 0xd100
-    SOFT_RESET = 0xd304
+    GET_FIRMWARE_VER = 0xD100
+    SOFT_RESET = 0xD304
 
     CLOCK_TIME_US = 10
 
@@ -35,6 +35,7 @@ class SCD30:
     #         crc = crc%256
     #     crc_table.append(crc)
 
+    # fmt: off
     CRC_TABLE = [
         0, 49, 98, 83, 196, 245, 166, 151, 185, 136, 219, 234, 125, 76, 31, 46,
         67, 114, 33, 16, 135, 182, 229, 212, 250, 203, 152, 169, 62, 15, 92, 109,
@@ -53,6 +54,7 @@ class SCD30:
         193, 240, 163, 146, 5, 52, 103, 86, 120, 73, 26, 43, 188, 141, 222, 239,
         130, 179, 224, 209, 70, 119, 36, 21, 59, 10, 89, 104, 255, 206, 157, 172
         ]
+    # fmt: on
 
     def __init__(self, i2c, addr, pause=1000):
         self.i2c = i2c
@@ -62,7 +64,7 @@ class SCD30:
             raise self.NotFoundException
 
     def start_continous_measurement(self, ambient_pressure=0):
-        bint = struct.pack('>H', ambient_pressure)
+        bint = struct.pack(">H", ambient_pressure)
         crc = self.__crc(bint[0], bint[1])
         data = bint + bytes([crc])
         self.i2c.writeto_mem(self.addr, self.START_CONT_MEASURE, data, addrsize=16)
@@ -76,33 +78,33 @@ class SCD30:
     def get_firmware_version(self):
         ver = self.__read_bytes(self.GET_FIRMWARE_VER, 3)
         self.__check_crc(ver)
-        return struct.unpack('BB', ver)
+        return struct.unpack("BB", ver)
 
     def read_measurement(self):
         measurement = self.__read_bytes(self.READ_MEASUREMENT, 18)
         for i in range(0, len(measurement), 3):
-            self.__check_crc(measurement[i:i+3])
+            self.__check_crc(measurement[i : i + 3])
 
         value = measurement[0:]
-        co2 = struct.unpack('>f', value[0:2] + value[3:5])[0]
+        co2 = struct.unpack(">f", value[0:2] + value[3:5])[0]
         value = measurement[6:]
-        temperature = struct.unpack('>f', value[0:2] + value[3:5])[0]
+        temperature = struct.unpack(">f", value[0:2] + value[3:5])[0]
         value = measurement[12:]
-        relh = struct.unpack('>f', value[0:2] + value[3:5])[0]
+        relh = struct.unpack(">f", value[0:2] + value[3:5])[0]
         return (co2, temperature, relh)
 
     def get_status_ready(self):
         ready = self.__read_bytes(self.GET_STATUS_READY, 3)
         self.__check_crc(ready)
-        return struct.unpack('>H', ready)[0]
+        return struct.unpack(">H", ready)[0]
 
     def get_measurement_interval(self):
         bint = self.__read_bytes(self.SET_MEASURE_INTERVAL, 3)
         self.__check_crc(bint)
-        return struct.unpack('>H', bint)[0]
+        return struct.unpack(">H", bint)[0]
 
     def set_measurement_interval(self, interval):
-        bint = struct.pack('>H', interval)
+        bint = struct.pack(">H", interval)
         crc = self.__crc(bint[0], bint[1])
         data = bint + bytes([crc])
         self.i2c.writeto_mem(self.addr, self.SET_MEASURE_INTERVAL, data, addrsize=16)
@@ -110,10 +112,10 @@ class SCD30:
     def get_automatic_recalibration(self):
         bint = self.__read_bytes(self.SET_ASC, 3)
         self.__check_crc(bint)
-        return struct.unpack('>H', bint)[0] == 1
+        return struct.unpack(">H", bint)[0] == 1
 
     def set_automatic_recalibration(self, enable):
-        bint = struct.pack('>H', 1 if enable else 0)
+        bint = struct.pack(">H", 1 if enable else 0)
         crc = self.__crc(bint[0], bint[1])
         data = bint + bytes([crc])
         self.i2c.writeto_mem(self.addr, self.SET_FRC, data, addrsize=16)
@@ -121,10 +123,10 @@ class SCD30:
     def get_forced_recalibration(self):
         bint = self.__read_bytes(self.SET_FRC, 3)
         self.__check_crc(bint)
-        return struct.unpack('>H', bint)[0]
+        return struct.unpack(">H", bint)[0]
 
     def set_forced_recalibration(self, co2ppm):
-        bint = struct.pack('>H', co2ppm)
+        bint = struct.pack(">H", co2ppm)
         crc = self.__crc(bint[0], bint[1])
         data = bint + bytes([crc])
         self.i2c.writeto_mem(self.addr, self.SET_FRC, data, addrsize=16)
@@ -132,10 +134,10 @@ class SCD30:
     def get_temperature_offset(self):
         bint = self.__read_bytes(self.SET_TEMP_OFFSET, 3)
         self.__check_crc(bint)
-        return struct.unpack('>H', bint)[0] / 100.0
+        return struct.unpack(">H", bint)[0] / 100.0
 
     def set_temperature_offset(self, offset):
-        bint = struct.pack('>H', int(offset * 100))
+        bint = struct.pack(">H", int(offset * 100))
         crc = self.__crc(bint[0], bint[1])
         data = bint + bytes([crc])
         self.i2c.writeto_mem(self.addr, self.SET_TEMP_OFFSET, data, addrsize=16)
@@ -143,16 +145,16 @@ class SCD30:
     def get_altitude_comp(self):
         bint = self.__read_bytes(self.SET_ALT_COMP, 3)
         self.__check_crc(bint)
-        return struct.unpack('>H', bint)[0]
+        return struct.unpack(">H", bint)[0]
 
     def set_altitude_comp(self, altitude):
-        bint = struct.pack('>H', altitude)
+        bint = struct.pack(">H", altitude)
         crc = self.__crc(bint[0], bint[1])
         data = bint + bytes([crc])
         self.i2c.writeto_mem(self.addr, self.SET_ALT_COMP, data, addrsize=16)
 
     def __write_command(self, cmd):
-        bcmd = struct.pack('>H', cmd)
+        bcmd = struct.pack(">H", cmd)
         self.i2c.writeto(self.addr, bcmd)
 
     def __read_bytes(self, cmd, count):
@@ -161,12 +163,12 @@ class SCD30:
         return self.i2c.readfrom(self.addr, count)
 
     def __check_crc(self, arr):
-        assert (len(arr) == 3)
+        assert len(arr) == 3
         if self.__crc(arr[0], arr[1]) != arr[2]:
             raise self.CRCException
 
     def __crc(self, msb, lsb):
-        crc = 0xff
+        crc = 0xFF
         crc ^= msb
         crc = self.CRC_TABLE[crc]
         if lsb is not None:
